@@ -1,0 +1,17 @@
+streamlit
+openai
+fal-client
+python-dotenv
+Pillow
+requests
+replicate
+instructor
+pydantic
+aiohttp
+docstring-parser
+jiter
+pydantic-core
+rich
+tenacity
+typer
+asyncio

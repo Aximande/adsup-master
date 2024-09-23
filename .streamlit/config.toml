@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#5281a6"  # Medium Blue
+backgroundColor = "#01030F"  # Black
+secondaryBackgroundColor = "#333435"  # Anthracite
+textColor = "#FFFFFF"  # White
+font = "Poppins"
