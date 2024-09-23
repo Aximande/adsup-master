@@ -2,17 +2,9 @@ import streamlit as st
 import replicate
 import os
 from dotenv import load_dotenv
-import torch
-from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 from utils import load_custom_css
 
-
-# Charger les variables d'environnement depuis le fichier .env
-#load_dotenv()
-
 # Récupérer le token Replicate depuis les variables de streamlit
-# Use Streamlit secrets instead of os.getenv
-
 REPLICATE_API_TOKEN = st.secrets["REPLICATE_API_TOKEN"]
 
 if not REPLICATE_API_TOKEN:
@@ -21,27 +13,6 @@ if not REPLICATE_API_TOKEN:
 
 # Initialiser le client Replicate
 replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
-
-# Initialiser le Flux Prompt Enhancer
-FLUX_ENHANCER_MODEL = "gokaygokay/Flux-Prompt-Enhance"
-FLUX_ENHANCER_MAX_LENGTH = 512
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
-# Charger le modèle et le tokenizer pour le prompt enhancer
-@st.cache_resource(show_spinner=False)
-def load_enhancer():
-    model_checkpoint = FLUX_ENHANCER_MODEL
-    tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_checkpoint)
-    enhancer = pipeline('text2text-generation',
-                        model=model,
-                        tokenizer=tokenizer,
-                        repetition_penalty=1.2,
-                        device=0 if device == "cuda" else -1)
-    return enhancer
-
-enhancer = load_enhancer()
 
 # Configuration de la page avec un thème personnalisé via config.toml
 st.set_page_config(
@@ -109,7 +80,7 @@ def display_header():
         if os.path.exists(logo_path):
             st.image(logo_path, width=150, use_column_width=False, caption=None)
         else:
-            st.warning("Logo Ad's up consulting non trouvé. Assurez-vous que 'seer-logo.png' est dans le dossier racine du projet.")
+            st.warning("Logo Ad's up consulting non trouvé. Assurez-vous que 'adsup-logo.png' est dans le dossier racine du projet.")
     with col_title:
         st.markdown("""
         <h1 style='text-align: center; color: #333333;'>Alfred - Le 1er Assistant au service de SEER pour la Génération d'Images</h1>
@@ -184,35 +155,6 @@ with col1:
         st.session_state.final_prompt = custom_prompt
     else:
         st.session_state.final_prompt = ""
-
-    # Section pour améliorer le prompt (si en anglais)
-    if st.session_state.final_prompt and language == "Anglais":
-        st.subheader("🔧 Amélioration du Prompt")
-        if st.button("✨ Améliorer le Prompt"):
-            with st.spinner("🔄 Amélioration en cours..."):
-                try:
-                    prefix = "enhance prompt: "
-                    input_prompt = prefix + st.session_state.final_prompt
-                    max_target_length = 256
-                    answer = enhancer(input_prompt, max_length=max_target_length, truncation=True)
-                    enhanced_prompt = answer[0]['generated_text']
-                    st.session_state.enhanced_prompt = enhanced_prompt
-                    st.success("✅ Prompt amélioré avec succès !")
-                    # Afficher le prompt amélioré pour modification
-                    st.subheader("📝 Prompt Amélioré")
-                    st.session_state.final_prompt = st.text_area(
-                        "✏️ Modifiez le prompt amélioré si nécessaire",
-                        value=st.session_state.enhanced_prompt,
-                        height=100
-                    )
-                except Exception as e:
-                    st.error(f"❌ Une erreur est survenue lors de l'amélioration du prompt : {e}")
-                    st.session_state.enhanced_prompt = ""
-        else:
-            st.session_state.enhanced_prompt = ""
-    elif st.session_state.final_prompt and language == "Français":
-        st.info("ℹ️ L'amélioration du prompt est disponible uniquement pour les prompts en anglais.")
-        st.session_state.enhanced_prompt = ""
 
     # Section pour ajouter du texte écrit avec typographie
     st.subheader("🖋️ Ajouter du Texte à l'Image")
@@ -451,38 +393,3 @@ with col2:
     if st.button("🔄 Réinitialiser"):
         reset_inputs()
         st.success("✅ Tous les champs ont été réinitialisés.")
-
-# Afficher l'historique
-st.header("📜 Historique des Générations 📜")
-for idx, item in enumerate(reversed(st.session_state.history)):
-    with st.expander(f"Génération {len(st.session_state.history) - idx}"):
-        st.write(f"**Prompt:** {item['prompt']}")
-        for img_url in item['images']:
-            st.image(img_url, width=200)
-
-# Footer avec logo Mozza et badges
-def display_footer():
-    st.markdown("<hr>", unsafe_allow_html=True)
-    col_footer = st.columns([1])
-    with col_footer[0]:
-        # Ajouter le logo de SEER
-        seer_logo_path = "logo-seer.png"
-        if os.path.exists(seer_logo_path):
-            st.image(seer_logo_path, width=150, use_column_width=False, caption="Développé par Ad's up consulting")
-        else:
-            st.warning("Logo SEER non trouvé. Assurez-vous que 'logo-seer.png' est dans le dossier racine du projet.")
-
-    # Ajouter les badges GitHub et Twitter
-    st.markdown("""
-    <div style="text-align: center; margin-top: 10px;">
-        <a href="https://github.com/Aximande" target="_blank" class="badge">
-            <img src="https://img.shields.io/github/followers/Aximande?label=Suivre%20sur%20GitHub&style=social" alt="Suivre sur GitHub">
-        </a>
-        <a href="https://twitter.com/adsupfr" target="_blank" class="badge">
-            <img src="https://img.shields.io/twitter/follow/adsupfr?style=social" alt="Suivre sur Twitter">
-        </a>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Afficher le footer
-display_footer()
