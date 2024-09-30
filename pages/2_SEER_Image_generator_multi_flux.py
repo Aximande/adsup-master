@@ -10,7 +10,7 @@ import csv
 import uuid
 import json
 import requests
-from datetime import datetime
+from datetime imÆport datetime
 #from dotenv import load_dotenv
 from transformers import pipeline
 from utils import load_custom_css
@@ -171,7 +171,7 @@ if 'prompt_history' not in st.session_state:
 if 'user_id' not in st.session_state:
     st.session_state['user_id'] = str(uuid.uuid4())
 if 'model' not in st.session_state:
-    st.session_state['model'] = None
+    st.session_state['model'] = 'flux-pro' #set here default model to flux pro
 if 'settings' not in st.session_state:
     st.session_state['settings'] = {}
 
@@ -185,6 +185,8 @@ def get_flux_enhancer():
         st.error(f"Erreur lors de l'initialisation du Flux Prompt Enhancer: {e}")
         return None
 
+enhancer = pipeline("text2text-generation", model=FLUX_ENHANCER_MODEL)
+
 if 'flux_enhancer' not in st.session_state:
     st.session_state.flux_enhancer = get_flux_enhancer()
 
@@ -192,11 +194,8 @@ def load_model_configs(directory="models_configs"):
     # Get the directory of the current script
     current_dir = os.path.dirname(os.path.abspath(__file__))
 
-    # Go up one level to the root of your project
-    root_dir = os.path.dirname(current_dir)
-
     # Construct the full path to your models_configs folder
-    models_config_dir = os.path.join(root_dir, directory)
+    models_config_dir = os.path.join(current_dir, directory)
 
     models = {}
     for filename in os.listdir(models_config_dir):
@@ -207,6 +206,7 @@ def load_model_configs(directory="models_configs"):
                 models[model_name] = {
                     "model_version": config.get("model_version"),
                     "trigger_word": config.get("trigger_word"),
+                    "description": config.get("description", ""),  # Add this line
                     "input_schema": config.get("input_schema", {})
                 }
 
@@ -214,11 +214,11 @@ def load_model_configs(directory="models_configs"):
                 if not models[model_name]["input_schema"] and "model_version" in config:
                     try:
                         api_url = f"https://api.replicate.com/v1/models/{config['model_version']}"
-                        response = requests.get(api_url)
+                        headers = {'Authorization': f'Token {REPLICATE_API_TOKEN}'}
+                        response = requests.get(api_url, headers=headers)
                         if response.status_code == 200:
-                            schema_data = response.json().get("openapi_schema", {})
-                            if "components" in schema_data and "schemas" in schema_data["components"]:
-                                models[model_name]["input_schema"] = schema_data["components"]["schemas"].get("Input", {})
+                            schema_data = response.json().get("schema", {})
+                            models[model_name]["input_schema"] = schema_data.get("input", {})
                     except Exception as e:
                         print(f"Error fetching schema for {model_name}: {e}")
 
@@ -281,13 +281,25 @@ def construct_final_prompt(base_prompt, text, typography_styles):
 def render_sidebar():
     with st.sidebar:
         st.header("🧠 Sélection du Modèle")
-        model = st.selectbox("Sélectionnez un Modèle", list(available_models.keys()),
-                             index=list(available_models.keys()).index(st.session_state['model']) if st.session_state['model'] in available_models else 0,
-                             help="Choisissez le modèle d'IA à utiliser pour générer l'image.")
+        model_names = list(available_models.keys())
+        default_model = st.session_state.get('model', model_names[0])
+
+        model = st.selectbox(
+            "Sélectionnez un Modèle",
+            options=model_names,
+            index=model_names.index(default_model) if default_model in model_names else 0,
+            help="Choisissez le modèle d'IA à utiliser pour générer l'image."
+        )
         st.session_state['model'] = model
 
+        # Display the model description
+        model_info = available_models[model]
+        description = model_info.get("description", "")
+        if description:
+            st.markdown(f"**Description du modèle :** {description}")
+
         # Display trigger word message if applicable
-        trigger_word = available_models[model].get("trigger_word")
+        trigger_word = model_info.get("trigger_word")
         if trigger_word:
             st.warning(f"Ce modèle nécessite le mot déclencheur : '{trigger_word}'. Assurez-vous de l'inclure dans votre prompt.")
             st.text(f"Exemple: {trigger_word}, a beautiful sunset over the ocean")
