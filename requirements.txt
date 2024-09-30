@@ -17,3 +17,4 @@ asyncio
 transformers
 tensorflow>=2.0
 torch
+keras<3
