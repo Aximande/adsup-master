@@ -185,7 +185,7 @@ def get_flux_enhancer():
         st.error(f"Erreur lors de l'initialisation du Flux Prompt Enhancer: {e}")
         return None
 
-enhancer = pipeline("text2text-generation", model=FLUX_ENHANCER_MODEL)
+enhancer = pipeline("text2text-generation", model="gokaygokay/Flux-Prompt-Enhance")
 
 if 'flux_enhancer' not in st.session_state:
     st.session_state.flux_enhancer = get_flux_enhancer()
