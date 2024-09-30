@@ -83,7 +83,7 @@ def display_header():
             st.warning("Logo Ad's up consulting non trouvé. Assurez-vous que 'adsup-logo.png' est dans le dossier racine du projet.")
     with col_title:
         st.markdown("""
-        <h1 style='text-align: center; color: #333333;'>Alfred - Le 1er Assistant au service de SEER pour la Génération d'Images</h1>
+        <h1 style='text-align: center; color: #FFFFFF;'>Alfred - Le 1er Assistant au service de SEER pour la Génération d'Images</h1>
         <p style='text-align: center; color: #555555;'>
             <a href="https://www.ads-up.fr/" target="_blank">Visitez le site web de Ad's up consulting</a>
         </p>
@@ -92,7 +92,7 @@ def display_header():
     # Section introductive
     st.markdown("""
     <div class="section">
-        <p style='font-size: 16px; color: #555555;'>
+        <p style='font-size: 16px; color: #FFFFFF;'>
             Créez des images uniques avec l'intelligence artificielle via le modèle dernière génération FLUX.PRO de Black Forest Labs, mis à disposition de l'équipe SEER d'Ad's up consulting.
         </p>
     </div>
