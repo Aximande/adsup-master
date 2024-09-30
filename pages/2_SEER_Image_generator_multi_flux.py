@@ -10,7 +10,7 @@ import csv
 import uuid
 import json
 import requests
-from datetime imÆport datetime
+from datetime import datetime
 #from dotenv import load_dotenv
 from transformers import pipeline
 from utils import load_custom_css
