@@ -1,6 +1,7 @@
 {
     "model_version": "adirik/flux-cinestill:216a43b9975de9768114644bbf8cd0cba54a923c6d0f65adceaccfc9383a938f",
     "trigger_word": "CNSTLL",
+    "description": "Modèle spécialisé dans la création de prises de vue cinématographiques, utilisez le mot déclencheur /CNSTLL/ pour déclencher la génération.",
     "input_schema": {
         "type": "object",
         "title": "Input",

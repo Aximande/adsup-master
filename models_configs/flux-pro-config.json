@@ -1,5 +1,6 @@
 {
     "model_version": "black-forest-labs/flux-pro",
+    "description": "Modèle de base Flux.Pro, le plus performant (et le plus cher) de black forest labs - excellente interprétation des prompts, une qualité visuelle supérieure, des détails d'image exceptionnels et une grande diversité de résultats.",
     "input_schema": {
         "type": "object",
         "title": "Input",

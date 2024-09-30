@@ -1,5 +1,6 @@
 {
     "model_version": "black-forest-labs/flux-schnell",
+    "description": "Modèle de base Flux Schnell, le moins cher et le plus rapide de la suite black forest labs, conçu pour le développement local et une utilisation personnelle.",
     "input_schema": {
         "type": "object",
         "title": "Input",

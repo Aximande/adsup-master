@@ -1,6 +1,7 @@
 {
     "model_version": "justmalhar/flux-sketchnotes:749e44eb2d6a1f19a965cb48aba61ec131a8dc42e4d71759d462686aaf41c429",
     "trigger_word": "A sketchnote in the style of TOK",
+    "description": "Modèle spécialisé dans la génèration de schémas dessinés à la main avec beaucoup de détails. Pensez à mettre dans votre prompt : /A sketchnote in the style of TOK/",
     "input_schema": {
         "type": "object",
         "title": "Input",

@@ -1,6 +1,7 @@
 {
     "model_version": "aleksa-codes/flux-ghibsky-illustration:a9f94946fa0377091ac0bcfe61b0d62ad9a85224e4b421b677d4747914b908c0",
     "trigger_word": "GHIBSKY style",
+    "description": "Modèle spécialisé dans la créa de paysages sereins et enchanteurs inspirés de Ghibli avec des ciels vibrants et surréalistes, ainsi que des éléments complexes inspirés de Ghibli, rappelant la beauté atmosphérique des œuvres de Makoto Shinkai, utilisez /GHIBSKY style/ pour déclencher la génération.",
     "input_schema": {
         "type": "object",
         "title": "Input",

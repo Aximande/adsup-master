@@ -1,6 +1,7 @@
 {
     "model_version": "aramintak/pola-style:67c27855ad0334cbca0f35cd5192777d885d5351e1d3e7149fe208d88db51bad",
     "trigger_word": "polaroid style",
+    "description": "Modèle spécialisé dans la créa d'images dans le style de vos vieux polaroïds",
     "input_schema": {
         "type": "object",
         "title": "Input",

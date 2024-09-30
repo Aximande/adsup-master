@@ -1,6 +1,7 @@
 {
     "model_version": "tudortotolici/newspaper_illustration:1797002c268b308bb2650476b8515b4410afabf5fb7c1cdb47584f5eae6bfd97",
     "trigger_word": "TOKNWSILL",
+    "description": "Modèle spécialisé dans la création de dessins en noir et blanc de style bande dessinée, rappelant les illustrations classiques des journaux.",
     "input_schema": {
         "type": "object",
         "title": "Input",

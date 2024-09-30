@@ -1,6 +1,7 @@
 {
     "model_version": "miike-ai/flux-ico:478cae37f1aec0fde7977fdd54b272aaeabede7d8060801841920c16306369a9",
     "trigger_word": "ICO",
+    "description":"Modèle spécialisé dans la création d'icônes et d'émojis. Créez de magnifiques icônes et émojis. Le mot déclencheur pour ce modèle est /ICO/",
     "input_schema": {
         "type": "object",
         "title": "Input",

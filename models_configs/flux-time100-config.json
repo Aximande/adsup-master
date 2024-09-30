@@ -1,6 +1,7 @@
 {
     "model_version": "lucataco/flux-time100:99ffe5dff76558f8b65d012bd35df0d2dddeaf201a23192941945de3b9c55501",
     "trigger_word": "TMHNDRD",
+    "description": "Modèle spécialisé pour créer des couvertures similaires à celles du magazine TIME pour les 100 personnes les plus influentes en IA. Le mot déclencheur pour ce modèle est /TMHNDRD/",
     "input_schema": {
         "type": "object",
         "title": "Input",

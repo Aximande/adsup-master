@@ -1,6 +1,7 @@
 {
     "model_version": "fofr/flux-cross-section:a9e1591da5dedf8d19838f31c4620ef622a7f876dfbe95e6f2f80701e4092b4c",
     "trigger_word": "XSEC cross section",
+    "description":"Modèle spécialisé dans la création de vues en coupe d'un objet ou d'un bâtiment (vue de coupe). Utilisez /XSEC cross section/ pour déclencher la génération d'images.",
     "input_schema": {
         "type": "object",
         "title": "Input",

@@ -1,6 +1,7 @@
 {
     "model_version": "samsa-ai/flux-tr1ppy:776c7f41894394596655f3df27e25410d86897c6cb91aae2e75ea6df7cb616df",
     "trigger_word": "tr1ppy style illustration",
+    "description": "Modèle spécialisé dans la création d'images psychédéliques et éclatantes.",
     "input_schema": {
         "type": "object",
         "title": "Input",

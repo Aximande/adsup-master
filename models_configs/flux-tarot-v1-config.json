@@ -1,6 +1,7 @@
 {
     "model_version": "apolinario/flux-tarot-v1:6c4ebdf049df552f8c02b3a7bbb3afec3d37b20924282bab8744f1168b6de470",
     "trigger_word": "in the style of TOK a trtcrd tarot style",
+    "description":" Modèle spécialisé dans la création de cartes de tarot artistiques.",
     "input_schema": {
         "type": "object",
         "title": "Input",

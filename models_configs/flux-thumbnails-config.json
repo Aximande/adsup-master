@@ -1,6 +1,7 @@
 {
     "model_version": "justmalhar/flux-thumbnails:42799c2b58e0a6ca82d3a1d90f655f6386542e325d2017e3256b092189f567b8",
     "trigger_word": "Thumbnail in the style of TOK",
+    "description": "Modèle spécialisé dans la création de thumbnail,miniatures, pour YouTube.",
     "input_schema": {
         "type": "object",
         "title": "Input",

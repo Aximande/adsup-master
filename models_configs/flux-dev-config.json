@@ -1,5 +1,6 @@
 {
     "model_version": "black-forest-labs/flux-dev",
+    "description": "Modèle de base Flux Dev, une alternative moins chère que Flux pro et meilleur que Flux schnell",
     "input_schema": {
         "type": "object",
         "title": "Input",

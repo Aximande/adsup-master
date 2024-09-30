@@ -1,5 +1,6 @@
 {
     "model_version": "xlabs-ai/flux-dev-realism:39b3434f194f87a900d1bc2b6d4b983e90f0dde1d5022c27b52c143d670758fa",
+    "description":"Modèle spécialisé dans la création d'images hautement réalistes. FLUX.1-dev avec le LoRA de réalisme de XLabs-AI",
     "trigger_word": null,
     "input_schema": {
         "type": "object",

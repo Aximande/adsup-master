@@ -1,6 +1,7 @@
 {
     "model_version": "samsa-ai/flux-childbook-illustration:cc3beea6ddc39416cf121390b476b1a8802ca47db03fb97306ef6c25f38f60a2",
     "trigger_word": "in the style of TOK",
+    "description": "Modèle spécialisé dans la création d'illustrations comme dans les livres pour enfants, utilisez /in the style of TOK/ dans votre prompt pour déclencher la génération.",
     "input_schema": {
         "type": "object",
         "title": "Input",
