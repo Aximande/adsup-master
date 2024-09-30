@@ -191,11 +191,26 @@ if 'flux_enhancer' not in st.session_state:
     st.session_state.flux_enhancer = get_flux_enhancer()
 
 def load_model_configs(directory="models_configs"):
-    # Get the directory of the current script
-    current_dir = os.path.dirname(os.path.abspath(__file__))
+    import os
+    import streamlit as st
 
-    # Construct the full path to your models_configs folder
-    models_config_dir = os.path.join(current_dir, directory)
+    # Try to locate the models_configs directory relative to possible locations
+
+    # First, check relative to the current working directory
+    models_config_dir = os.path.join(os.getcwd(), directory)
+
+    if not os.path.exists(models_config_dir):
+        # If not found, check relative to the script's directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        models_config_dir = os.path.join(current_dir, directory)
+        if not os.path.exists(models_config_dir):
+            # Try the parent directory of the script's directory
+            parent_dir = os.path.dirname(current_dir)
+            models_config_dir = os.path.join(parent_dir, directory)
+            if not os.path.exists(models_config_dir):
+                # If still not found, display an error and stop the app
+                st.error("Cannot find the 'models_configs' directory. Please ensure it exists in the app directory.")
+                st.stop()
 
     models = {}
     for filename in os.listdir(models_config_dir):
@@ -206,7 +221,7 @@ def load_model_configs(directory="models_configs"):
                 models[model_name] = {
                     "model_version": config.get("model_version"),
                     "trigger_word": config.get("trigger_word"),
-                    "description": config.get("description", ""),  # Add this line
+                    "description": config.get("description", ""),  # Include description
                     "input_schema": config.get("input_schema", {})
                 }
 
@@ -221,7 +236,6 @@ def load_model_configs(directory="models_configs"):
                             models[model_name]["input_schema"] = schema_data.get("input", {})
                     except Exception as e:
                         print(f"Error fetching schema for {model_name}: {e}")
-
     return models
 
 # Load model configurations
