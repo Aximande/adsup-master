@@ -1,4 +1,9 @@
 import streamlit as st
+st.set_page_config(
+    page_title="Alfred - Assistant de Génération d'Images",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 import replicate
 import os
 import csv
@@ -10,15 +15,7 @@ from datetime import datetime
 from transformers import pipeline
 from utils import load_custom_css
 
-
 def main():
-    # Déplacer l'appel de st.set_page_config() ici
-    st.set_page_config(
-        page_title="Alfred - Assistant de Génération d'Images",
-        layout="wide",
-        initial_sidebar_state="expanded",
-    )
-
     display_header()
     render_sidebar()
 
