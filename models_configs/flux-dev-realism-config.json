@@ -1,0 +1,97 @@
+{
+    "model_version": "xlabs-ai/flux-dev-realism:39b3434f194f87a900d1bc2b6d4b983e90f0dde1d5022c27b52c143d670758fa",
+    "trigger_word": null,
+    "input_schema": {
+        "type": "object",
+        "title": "Input",
+        "properties": {
+            "prompt": {
+                "type": "string",
+                "title": "Prompt",
+                "default": "",
+                "x-order": 0
+            },
+            "aspect_ratio": {
+                "enum": [
+                    "1:1",
+                    "16:9",
+                    "21:9",
+                    "2:3",
+                    "3:2",
+                    "4:5",
+                    "5:4",
+                    "9:16",
+                    "9:21"
+                ],
+                "type": "string",
+                "title": "aspect_ratio",
+                "description": "Aspect ratio for the generated image",
+                "default": "1:1",
+                "x-order": 1
+            },
+            "num_outputs": {
+                "type": "integer",
+                "title": "Num Outputs",
+                "default": 1,
+                "maximum": 4,
+                "minimum": 1,
+                "x-order": 2,
+                "description": "Number of outputs to generate"
+            },
+            "num_inference_steps": {
+                "type": "integer",
+                "title": "Num Inference Steps",
+                "default": 30,
+                "maximum": 50,
+                "minimum": 1,
+                "x-order": 3,
+                "description": "Number of denoising steps. Recommended range is 28-50"
+            },
+            "guidance": {
+                "type": "number",
+                "title": "Guidance",
+                "default": 3.5,
+                "maximum": 10,
+                "minimum": 0,
+                "x-order": 4,
+                "description": "Guidance for generated image"
+            },
+            "lora_strength": {
+                "type": "number",
+                "title": "Lora Strength",
+                "default": 0.8,
+                "maximum": 2,
+                "minimum": 0,
+                "x-order": 5,
+                "description": "Strength of flux-realism lora, 0 is disabled"
+            },
+            "output_format": {
+                "enum": [
+                    "webp",
+                    "jpg",
+                    "png"
+                ],
+                "type": "string",
+                "title": "output_format",
+                "description": "Format of the output images",
+                "default": "webp",
+                "x-order": 6
+            },
+            "output_quality": {
+                "type": "integer",
+                "title": "Output Quality",
+                "default": 80,
+                "maximum": 100,
+                "minimum": 0,
+                "x-order": 7,
+                "description": "Quality of the output images, from 0 to 100. 100 is best quality, 0 is lowest quality."
+            },
+            "seed": {
+                "type": "integer",
+                "title": "Seed",
+                "x-order": 8,
+                "description": "Set a seed for reproducibility. Random by default."
+            }
+        }
+    }
+}

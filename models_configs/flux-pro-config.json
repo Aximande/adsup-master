@@ -1,0 +1,97 @@
+{
+    "model_version": "black-forest-labs/flux-pro",
+    "input_schema": {
+        "type": "object",
+        "title": "Input",
+        "required": [
+            "prompt"
+        ],
+        "properties": {
+            "prompt": {
+                "type": "string",
+                "title": "Prompt",
+                "x-order": 0,
+                "description": "Text prompt for image generation"
+            },
+            "aspect_ratio": {
+                "enum": [
+                    "1:1",
+                    "16:9",
+                    "2:3",
+                    "3:2",
+                    "4:5",
+                    "5:4",
+                    "9:16"
+                ],
+                "type": "string",
+                "title": "aspect_ratio",
+                "description": "Aspect ratio for the generated image",
+                "default": "1:1",
+                "x-order": 1
+            },
+            "steps": {
+                "type": "integer",
+                "title": "Steps",
+                "default": 25,
+                "maximum": 50,
+                "minimum": 1,
+                "x-order": 2,
+                "description": "Number of diffusion steps"
+            },
+            "guidance": {
+                "type": "number",
+                "title": "Guidance",
+                "default": 3,
+                "maximum": 5,
+                "minimum": 2,
+                "x-order": 3,
+                "description": "Controls the balance between adherence to the text prompt and image quality/diversity. Higher values make the output more closely match the prompt but may reduce overall image quality. Lower values allow for more creative freedom but might produce results less relevant to the prompt."
+            },
+            "interval": {
+                "type": "number",
+                "title": "Interval",
+                "default": 2,
+                "maximum": 4,
+                "minimum": 1,
+                "x-order": 4,
+                "description": "Interval is a setting that increases the variance in possible outputs letting the model be a tad more dynamic in what outputs it may produce in terms of composition, color, detail, and prompt interpretation. Setting this value low will ensure strong prompt following with more consistent outputs, setting it higher will produce more dynamic or varied outputs."
+            },
+            "safety_tolerance": {
+                "type": "integer",
+                "title": "Safety Tolerance",
+                "default": 2,
+                "maximum": 5,
+                "minimum": 1,
+                "x-order": 5,
+                "description": "Safety tolerance, 1 is most strict and 5 is most permissive"
+            },
+            "seed": {
+                "type": "integer",
+                "title": "Seed",
+                "x-order": 6,
+                "description": "Random seed. Set for reproducible generation"
+            },
+            "output_format": {
+                "enum": [
+                    "webp",
+                    "jpg",
+                    "png"
+                ],
+                "type": "string",
+                "title": "output_format",
+                "description": "Format of the output images",
+                "default": "webp",
+                "x-order": 7
+            },
+            "output_quality": {
+                "type": "integer",
+                "title": "Output Quality",
+                "default": 80,
+                "maximum": 100,
+                "minimum": 0,
+                "x-order": 8,
+                "description": "Quality when saving the output images, from 0 to 100. 100 is best quality, 0 is lowest quality. Not relevant for .png outputs"
+            }
+        }
+    }
+}
