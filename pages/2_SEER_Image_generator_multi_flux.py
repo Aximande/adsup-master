@@ -11,8 +11,144 @@ from transformers import pipeline
 from utils import load_custom_css
 
 
-# Load environment variables
-#load_dotenv()
+def main():
+    # Déplacer l'appel de st.set_page_config() ici
+    st.set_page_config(
+        page_title="Alfred - Assistant de Génération d'Images",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+
+    display_header()
+    render_sidebar()
+
+    st.subheader("📝 Entrez votre prompt")
+    prompt = st.text_area(
+        "Prompt",
+        value=st.session_state.prompt_history[-1] if st.session_state.prompt_history else "",
+        height=150,
+        placeholder="Entrez votre description ici...",
+        help="Saisissez une description détaillée pour générer une image."
+    )
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("💾 Enregistrer le prompt"):
+            st.session_state.prompt_history.append(prompt)
+            st.success("Prompt enregistré.")
+    with col2:
+        if st.button("✨ Raffiner le prompt"):
+            if prompt.strip():
+                with st.spinner("Raffinement du prompt en cours..."):
+                    enhanced_prompt = enhance_prompt(prompt)
+                    st.session_state.prompt_history.append(enhanced_prompt)
+                    st.success("Prompt raffiné et enregistré.")
+            else:
+                st.warning("Veuillez d'abord entrer un prompt.")
+
+    if st.session_state.prompt_history:
+        editable_prompt = st.text_area(
+            "📝 Modifier le prompt",
+            value=st.session_state.prompt_history[-1],
+            height=150,
+            help="Vous pouvez modifier le prompt actuel."
+        )
+        if st.button("💾 Enregistrer les modifications"):
+            st.session_state.prompt_history.append(editable_prompt)
+            st.success("Modifications enregistrées.")
+    else:
+        st.warning("Aucun prompt n'a été enregistré pour le moment.")
+
+    show_text_section = st.checkbox("Ajouter du texte à l'image", value=False)
+
+    if show_text_section:
+        st.subheader("🖋️ Ajouter du Texte à l'Image")
+        text_to_add = st.text_input(
+            "✏️ Texte à Ajouter",
+            value="",
+            help="Entrez le texte que vous souhaitez intégrer à l'image. L'IA tentera d'ajouter ce texte à l'image générée."
+        )
+        st.session_state['text_to_add'] = text_to_add
+
+        typography_options_list = [
+            "Bold", "Italic", "Underlined", "Shadow", "3D", "Gradient", "Handwritten",
+            "Calligraphy", "Graffiti", "Vintage", "Futuristic", "Neon", "Glow",
+            "Comic", "Stencil", "Watercolor", "Chalk", "Marker", "Spray Paint"
+        ]
+        typography_options = st.multiselect(
+            "🔠 Options de Typographie",
+            options=typography_options_list,
+            help="Sélectionnez les styles typographiques à appliquer au texte ajouté. Plus vous choisissez de styles, plus le rendu sera complexe."
+        )
+        st.session_state['typography_options'] = typography_options
+
+    if st.session_state.prompt_history:
+        prompt_to_use = st.session_state.prompt_history[-1]
+        final_prompt = construct_final_prompt(
+            prompt_to_use,
+            st.session_state.get('text_to_add', ''),
+            st.session_state.get('typography_options', [])
+        )
+        st.subheader("Prompt Final :")
+        st.info(final_prompt)
+    else:
+        final_prompt = None
+        st.warning("Veuillez entrer un prompt pour continuer.")
+
+    if st.button("🚀 Générer l'Image"):
+        if not final_prompt:
+            st.error("❌ Veuillez entrer un prompt valide.")
+        elif not st.session_state['model']:
+            st.error("❌ Veuillez sélectionner un modèle.")
+        else:
+            with st.spinner("🖼️ Génération en cours..."):
+                try:
+                    output = generate_image(final_prompt, st.session_state['model'], st.session_state['settings'])
+                    if output:
+                        st.success("✅ Image(s) générée(s) avec succès !")
+                        if isinstance(output, list):
+                            for idx, img_url in enumerate(output):
+                                st.image(img_url, use_column_width=True, caption=f"Image {idx+1}")
+                        else:
+                            st.image(output, use_column_width=True, caption="Image générée")
+
+                        log_interaction(
+                            prompt=final_prompt,
+                            parameters=st.session_state['settings'],
+                            output_url=output,
+                            model_name=st.session_state['model'],
+                            user_id=st.session_state['user_id']
+                        )
+
+                        st.session_state.history.append({
+                            "prompt": final_prompt,
+                            "images": output if isinstance(output, list) else [output]
+                        })
+                except Exception as e:
+                    st.error(f"❌ Une erreur est survenue : {e}")
+                    log_interaction(
+                        prompt=final_prompt,
+                        parameters=st.session_state['settings'],
+                        output_url=f"Error: {e}",
+                        model_name=st.session_state['model'],
+                        user_id=st.session_state['user_id']
+                    )
+
+    if st.button("🔄 Réinitialiser"):
+        reset_inputs()
+        st.success("✅ Tous les champs ont été réinitialisés.")
+
+    if st.session_state.history:
+        st.header("🗂️ Historique des Générations")
+        st.markdown("Retrouvez ci-dessous les images que vous avez générées précédemment.")
+
+        for i, item in enumerate(reversed(st.session_state.history)):
+            with st.expander(f"Génération {len(st.session_state.history) - i} : {item['prompt'][:50]}..."):
+                st.write(f"**Prompt utilisé :** {item['prompt']}")
+                for j, img_url in enumerate(item['images']):
+                    st.image(img_url, caption=f"Image {j+1}", use_column_width=True)
+
+        st.markdown("**Note :** L'historique est stocké localement dans votre session et sera perdu si vous rafraîchissez la page.")
 
 # Charger le CSS personnalisé
 load_custom_css()
@@ -29,13 +165,6 @@ if not REPLICATE_API_TOKEN:
 # Initialize the Replicate API client
 replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
-
-# Page configuration
-st.set_page_config(
-        page_title="Alfred - Assistant de Génération d'Images",
-        layout="wide",
-        initial_sidebar_state="expanded",
-)
 
 # Initialize session state variables
 if 'history' not in st.session_state:
@@ -240,137 +369,6 @@ def generate_image(prompt, model, settings):
         st.error(f"Erreur lors de la génération de l'image : {e}")
         return None
 
-def main():
-    display_header()
-    render_sidebar()
-
-    st.subheader("📝 Entrez votre prompt")
-    prompt = st.text_area(
-        "Prompt",
-        value=st.session_state.prompt_history[-1] if st.session_state.prompt_history else "",
-        height=150,
-        placeholder="Entrez votre description ici...",
-        help="Saisissez une description détaillée pour générer une image."
-    )
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("💾 Enregistrer le prompt"):
-            st.session_state.prompt_history.append(prompt)
-            st.success("Prompt enregistré.")
-    with col2:
-        if st.button("✨ Raffiner le prompt"):
-            if prompt.strip():
-                with st.spinner("Raffinement du prompt en cours..."):
-                    enhanced_prompt = enhance_prompt(prompt)
-                    st.session_state.prompt_history.append(enhanced_prompt)
-                    st.success("Prompt raffiné et enregistré.")
-            else:
-                st.warning("Veuillez d'abord entrer un prompt.")
-
-    if st.session_state.prompt_history:
-        editable_prompt = st.text_area(
-            "📝 Modifier le prompt",
-            value=st.session_state.prompt_history[-1],
-            height=150,
-            help="Vous pouvez modifier le prompt actuel."
-        )
-        if st.button("💾 Enregistrer les modifications"):
-            st.session_state.prompt_history.append(editable_prompt)
-            st.success("Modifications enregistrées.")
-    else:
-        st.warning("Aucun prompt n'a été enregistré pour le moment.")
-
-    show_text_section = st.checkbox("Ajouter du texte à l'image", value=False)
-
-    if show_text_section:
-        st.subheader("🖋️ Ajouter du Texte à l'Image")
-        text_to_add = st.text_input(
-            "✏️ Texte à Ajouter",
-            value="",
-            help="Entrez le texte que vous souhaitez intégrer à l'image. L'IA tentera d'ajouter ce texte à l'image générée."
-        )
-        st.session_state['text_to_add'] = text_to_add
-
-        typography_options_list = [
-            "Bold", "Italic", "Underlined", "Shadow", "3D", "Gradient", "Handwritten",
-            "Calligraphy", "Graffiti", "Vintage", "Futuristic", "Neon", "Glow",
-            "Comic", "Stencil", "Watercolor", "Chalk", "Marker", "Spray Paint"
-        ]
-        typography_options = st.multiselect(
-            "🔠 Options de Typographie",
-            options=typography_options_list,
-            help="Sélectionnez les styles typographiques à appliquer au texte ajouté. Plus vous choisissez de styles, plus le rendu sera complexe."
-        )
-        st.session_state['typography_options'] = typography_options
-
-    if st.session_state.prompt_history:
-        prompt_to_use = st.session_state.prompt_history[-1]
-        final_prompt = construct_final_prompt(
-            prompt_to_use,
-            st.session_state.get('text_to_add', ''),
-            st.session_state.get('typography_options', [])
-        )
-        st.subheader("Prompt Final :")
-        st.info(final_prompt)
-    else:
-        final_prompt = None
-        st.warning("Veuillez entrer un prompt pour continuer.")
-
-    if st.button("🚀 Générer l'Image"):
-        if not final_prompt:
-            st.error("❌ Veuillez entrer un prompt valide.")
-        elif not st.session_state['model']:
-            st.error("❌ Veuillez sélectionner un modèle.")
-        else:
-            with st.spinner("🖼️ Génération en cours..."):
-                try:
-                    output = generate_image(final_prompt, st.session_state['model'], st.session_state['settings'])
-                    if output:
-                        st.success("✅ Image(s) générée(s) avec succès !")
-                        if isinstance(output, list):
-                            for idx, img_url in enumerate(output):
-                                st.image(img_url, use_column_width=True, caption=f"Image {idx+1}")
-                        else:
-                            st.image(output, use_column_width=True, caption="Image générée")
-
-                        log_interaction(
-                            prompt=final_prompt,
-                            parameters=st.session_state['settings'],
-                            output_url=output,
-                            model_name=st.session_state['model'],
-                            user_id=st.session_state['user_id']
-                        )
-
-                        st.session_state.history.append({
-                            "prompt": final_prompt,
-                            "images": output if isinstance(output, list) else [output]
-                        })
-                except Exception as e:
-                    st.error(f"❌ Une erreur est survenue : {e}")
-                    log_interaction(
-                        prompt=final_prompt,
-                        parameters=st.session_state['settings'],
-                        output_url=f"Error: {e}",
-                        model_name=st.session_state['model'],
-                        user_id=st.session_state['user_id']
-                    )
-
-    if st.button("🔄 Réinitialiser"):
-        reset_inputs()
-        st.success("✅ Tous les champs ont été réinitialisés.")
-
-    if st.session_state.history:
-        st.header("🗂️ Historique des Générations")
-        st.markdown("Retrouvez ci-dessous les images que vous avez générées précédemment.")
-
-        for i, item in enumerate(reversed(st.session_state.history)):
-            with st.expander(f"Génération {len(st.session_state.history) - i} : {item['prompt'][:50]}..."):
-                st.write(f"**Prompt utilisé :** {item['prompt']}")
-                for j, img_url in enumerate(item['images']):
-                    st.image(img_url, caption=f"Image {j+1}", use_column_width=True)
-
-        st.markdown("**Note :** L'historique est stocké localement dans votre session et sera perdu si vous rafraîchissez la page.")
 
 if __name__ == "__main__":
     main()
