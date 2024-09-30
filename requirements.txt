@@ -15,3 +15,5 @@ tenacity
 typer
 asyncio
 transformers
+tensorflow>=2.0
+pytorch
