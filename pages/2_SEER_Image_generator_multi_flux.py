@@ -6,11 +6,13 @@ import uuid
 import json
 import requests
 from datetime import datetime
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 from transformers import pipeline
+from utils import load_custom_css
+
 
 # Load environment variables
-load_dotenv()
+#load_dotenv()
 
 # Charger le CSS personnalisé
 load_custom_css()
@@ -27,11 +29,12 @@ if not REPLICATE_API_TOKEN:
 # Initialize the Replicate API client
 replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
+
 # Page configuration
 st.set_page_config(
-    page_title="Alfred - Assistant de Génération d'Images",
-    layout="wide",
-    initial_sidebar_state="expanded",
+        page_title="Alfred - Assistant de Génération d'Images",
+        layout="wide",
+        initial_sidebar_state="expanded",
 )
 
 # Initialize session state variables
