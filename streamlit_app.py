@@ -25,6 +25,7 @@ def main():
 
         - **Catégorisation de Mots-Clés :** Classez et organisez vos mots-clés de manière efficace.
         - **Générateur d'Images :** Créez des images alimentées par l'IA en fonction de vos prompts.
+        - **Analyseur de vidéo YouTube :** Créez des résumés dans n'importe quelle langue de n'importe quelle vidéo youtube afin de booster votre veille
 
         ---
         Pour toute question, veuillez contacter **[alexandre.lavallee@ads-up.fr](mailto:alexandre.lavallee@ads-up.fr)**.
