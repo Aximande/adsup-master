@@ -13,6 +13,91 @@ REPLICATE_API_TOKEN = st.secrets["REPLICATE_API_TOKEN"]
 # Initialize the Replicate client
 replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
+# Default input schema for custom models
+default_input_schema = {
+    "prompt": {
+        "type": "string",
+        "title": "Prompt",
+        "description": "Description de l'image à générer."
+    },
+    "model": {
+        "type": "string",
+        "title": "Version du Modèle",
+        "description": "Sélectionnez la version du modèle.",
+        "enum": ["dev", "schnell"],
+        "default": "dev"
+    },
+    "lora_scale": {
+        "type": "number",
+        "title": "LoRA Scale",
+        "description": "Détermine la force d'application du LoRA principal.",
+        "default": 1,
+        "minimum": -1,
+        "maximum": 2
+    },
+    "num_outputs": {
+        "type": "integer",
+        "title": "Nombre d'Images",
+        "description": "Nombre d'images à générer.",
+        "default": 1,
+        "minimum": 1,
+        "maximum": 4
+    },
+    "aspect_ratio": {
+        "type": "string",
+        "title": "Aspect Ratio",
+        "description": "Ratio de l'image générée.",
+        "enum": ["1:1", "16:9", "21:9", "3:2", "2:3", "4:5", "5:4", "3:4", "4:3", "9:16", "9:21", "custom"],
+        "default": "1:1"
+    },
+    "output_format": {
+        "type": "string",
+        "title": "Format de Sortie",
+        "description": "Format des images générées.",
+        "enum": ["webp", "jpg", "png"],
+        "default": "webp"
+    },
+    "guidance_scale": {
+        "type": "number",
+        "title": "Guidance Scale",
+        "description": "Scale pour le processus de diffusion. Des valeurs plus faibles peuvent donner des images plus réalistes.",
+        "default": 3.5,
+        "minimum": 0,
+        "maximum": 10
+    },
+    "output_quality": {
+        "type": "integer",
+        "title": "Qualité de Sortie",
+        "description": "Qualité lors de la sauvegarde des images de sortie, de 0 à 100.",
+        "default": 90,
+        "minimum": 0,
+        "maximum": 100
+    },
+    "prompt_strength": {
+        "type": "number",
+        "title": "Puissance du Prompt",
+        "description": "Puissance du prompt lors de l'utilisation d'img2img / inpaint.",
+        "default": 0.8,
+        "minimum": 0,
+        "maximum": 1.0
+    },
+    "extra_lora_scale": {
+        "type": "number",
+        "title": "Extra LoRA Scale",
+        "description": "Détermine la force d'application de l'Extra LoRA.",
+        "default": 1,
+        "minimum": -1,
+        "maximum": 2
+    },
+    "num_inference_steps": {
+        "type": "integer",
+        "title": "Nombre d'Étapes d'Inférence",
+        "description": "Nombre d'étapes d'inférence. Plus d'étapes peuvent donner des images plus détaillées.",
+        "default": 28,
+        "minimum": 1,
+        "maximum": 50
+    },
+}
 
 def get_model_versions(model_owner, model_name):
     model_versions = []
@@ -150,7 +235,7 @@ def render_sidebar():
 
 def render_parameter(param, schema, settings):
     if not isinstance(schema, dict):
-        st.warning(f"Skipping parameter '{param}' because its schema is not properly defined.")
+        st.warning(f"Le paramètre '{param}' n'a pas de schéma défini correctement.")
         return
 
     title = schema.get("title", param.replace("_", " ").capitalize())
@@ -176,57 +261,26 @@ def render_parameter(param, schema, settings):
         if schema.get("format") == "uri":
             settings[param] = st.sidebar.text_input(title, "", help=description)
         else:
-            settings[param] = st.sidebar.text_input(title, "", help=description)
+            settings[param] = st.sidebar.text_input(title, schema.get("default", ""), help=description)
 
 
 def render_main_settings():
     st.sidebar.subheader("Paramètres Principaux")
     settings = st.session_state.get('settings', {})
 
-    if not st.session_state.get('selected_version'):
-        st.warning("Veuillez sélectionner une version du modèle personnalisé.")
-        return
-    else:
-        # Extract version ID directly from the selected_version string
-        try:
-            selected_version_str = st.session_state['selected_version']
-            version_id = selected_version_str.split("ID: ")[1].split(" - Créé le:")[0]
-
-            # Construct the model_version string
-            owner = st.session_state['custom_owner']
-            name = st.session_state['custom_name']
-            model_version = f"{owner}/{name}:{version_id}"
-
-            # Fetch input schema for the selected custom model version
-            try:
-                api_url = f"https://api.replicate.com/v1/models/{owner}/{name}/versions/{version_id}"
-                headers = {'Authorization': f'Token {REPLICATE_API_TOKEN}'}
-                response = requests.get(api_url, headers=headers)
-                if response.status_code == 200:
-                    schema_data = response.json().get("schema", {})
-                    model_input_schema = schema_data.get('properties', {})
-                else:
-                    model_input_schema = {}
-                    st.error("Impossible de récupérer le schéma d'entrée pour cette version de modèle.")
-            except Exception as e:
-                model_input_schema = {}
-                st.error(f"Erreur lors de la récupération du schéma d'entrée: {e}")
-        except Exception as e:
-            model_input_schema = {}
-            st.error(f"Erreur lors de l'extraction de l'ID de la version: {e}")
+    # Use default input schema
+    model_input_schema = default_input_schema
 
     # Define main parameters based on your custom models
     main_params = ["prompt", "model", "lora_scale", "num_outputs", "aspect_ratio", "output_format",
                    "guidance_scale", "output_quality", "prompt_strength", "extra_lora_scale", "num_inference_steps"]
-
-    settings['prompt'] = ""  # Initialize prompt in settings
 
     for param in main_params:
         schema_param = model_input_schema.get(param)
         if isinstance(schema_param, dict):
             render_parameter(param, schema_param, settings)
         else:
-            st.warning(f"Parameter '{param}' is not available in the model's schema.")
+            st.warning(f"Le paramètre '{param}' n'est pas disponible dans le schéma par défaut.")
 
     # Update st.session_state['settings']
     st.session_state['settings'] = settings
@@ -236,46 +290,17 @@ def render_advanced_settings():
     st.sidebar.subheader("Paramètres Avancés")
     settings = st.session_state.get('settings', {})
 
-    if not st.session_state.get('selected_version'):
-        st.warning("Veuillez sélectionner une version du modèle personnalisé.")
-        return
-    else:
-        try:
-            selected_version_str = st.session_state['selected_version']
-            version_id = selected_version_str.split("ID: ")[1].split(" - Créé le:")[0]
+    model_input_schema = default_input_schema
 
-            # Construct the model_version string
-            owner = st.session_state['custom_owner']
-            name = st.session_state['custom_name']
-            model_version = f"{owner}/{name}:{version_id}"
-
-            # Fetch input schema for the selected custom model version
-            try:
-                api_url = f"https://api.replicate.com/v1/models/{owner}/{name}/versions/{version_id}"
-                headers = {'Authorization': f'Token {REPLICATE_API_TOKEN}'}
-                response = requests.get(api_url, headers=headers)
-                if response.status_code == 200:
-                    schema_data = response.json().get("schema", {})
-                    model_input_schema = schema_data.get('properties', {})
-                else:
-                    model_input_schema = {}
-                    st.error("Impossible de récupérer le schéma d'entrée pour cette version de modèle.")
-            except Exception as e:
-                model_input_schema = {}
-                st.error(f"Erreur lors de la récupération du schéma d'entrée: {e}")
-        except Exception as e:
-            model_input_schema = {}
-            st.error(f"Erreur lors de l'extraction de l'ID de la version: {e}")
-
-    # Define advanced parameters based on your custom models
-    advanced_params = [param for param in model_input_schema.keys() if param not in st.session_state['settings']]
+    # Exclude parameters already in settings (from main parameters)
+    advanced_params = [param for param in model_input_schema.keys() if param not in settings and param != 'prompt']
 
     for param in advanced_params:
         schema_param = model_input_schema.get(param)
         if isinstance(schema_param, dict):
             render_parameter(param, schema_param, settings)
         else:
-            st.warning(f"Parameter '{param}' is not available in the model's schema.")
+            st.warning(f"Le paramètre '{param}' n'est pas disponible dans le schéma par défaut.")
 
     # Update st.session_state['settings']
     st.session_state['settings'] = settings
