@@ -1,40 +1,75 @@
 import streamlit as st
 import replicate
-import logging
+import os
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+REPLICATE_API_TOKEN = st.secrets.get("REPLICATE_API_TOKEN") or os.getenv("REPLICATE_API_TOKEN")
+if not REPLICATE_API_TOKEN:
+    st.error("Replicate API token not found. Please set it in Streamlit secrets or as an environment variable.")
+    st.stop()
 
-def get_public_models(username="aximande"):
-    try:
-        public_models = []
-        for page in replicate.paginate(replicate.Client().models.list):
-            for model in page:
-                if model.owner == username:
-                    public_models.append(model)
-                    logging.info(f"Found public model: {model.owner}/{model.name}")
+replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
-        if not public_models:
-            logging.warning(f"No public models found for user {username}")
+@st.cache_data(ttl=300)
+def get_available_models():
+    models = replicate_client.models.list(owner="aximande")
+    return [f"{model.owner}/{model.name}:{model.latest_version.id}" for model in models]
 
-        model_dict = {f"{model.owner}/{model.name}": {
-            "id": model.id,
-            "name": model.name,
-            "description": model.description,
-            "owner": model.owner,
-            "visibility": model.visibility,
-            "latest_version": model.latest_version
-        } for model in public_models}
+def image_generation_page():
+    st.header("Generate Images with Fine-Tuned FLUX Models")
 
-        return model_dict
-    except Exception as e:
-        logging.error(f"Error fetching public models: {e}")
-        return {}
+    # Get available models
+    available_models = get_available_models()
 
-# Test the function
-st.write("Fetching public models...")
-public_models = get_public_models()
-st.write(f"Found {len(public_models)} public models:")
-for model_name, model_info in public_models.items():
-    st.write(f"- {model_name}")
-    st.json(model_info)
+    # Select model
+    selected_model = st.selectbox("Select a model", available_models)
+
+    # Input fields
+    prompt = st.text_area("Enter your prompt")
+    negative_prompt = st.text_area("Enter negative prompt (optional)")
+
+    # Model parameters
+    model = st.selectbox("Model version", ["dev", "main", "newest"])
+    lora_scale = st.slider("LoRA scale", 0.0, 1.0, 1.0, 0.01)
+    num_outputs = st.slider("Number of images to generate", 1, 4, 1)
+    aspect_ratio = st.selectbox("Aspect ratio", ["1:1", "4:3", "3:4", "16:9", "9:16"])
+    output_format = st.selectbox("Output format", ["webp", "png"])
+    guidance_scale = st.slider("Guidance scale", 1.0, 20.0, 3.5, 0.1)
+    output_quality = st.slider("Output quality", 60, 100, 90)
+    prompt_strength = st.slider("Prompt strength", 0.0, 1.0, 0.8, 0.01)
+    extra_lora_scale = st.slider("Extra LoRA scale", 0.0, 1.0, 1.0, 0.01)
+    num_inference_steps = st.slider("Number of inference steps", 1, 150, 28)
+
+    if st.button("Generate Images"):
+        if prompt:
+            with st.spinner("Generating images..."):
+                input_params = {
+                    "prompt": prompt,
+                    "negative_prompt": negative_prompt,
+                    "model": model,
+                    "lora_scale": lora_scale,
+                    "num_outputs": num_outputs,
+                    "aspect_ratio": aspect_ratio,
+                    "output_format": output_format,
+                    "guidance_scale": guidance_scale,
+                    "output_quality": output_quality,
+                    "prompt_strength": prompt_strength,
+                    "extra_lora_scale": extra_lora_scale,
+                    "num_inference_steps": num_inference_steps
+                }
+
+                output = replicate_client.run(
+                    selected_model,
+                    input=input_params
+                )
+
+                # Display generated images
+                if isinstance(output, list):
+                    for i, image_url in enumerate(output):
+                        st.image(image_url, caption=f"Generated Image {i+1}")
+                else:
+                    st.image(output, caption="Generated Image")
+        else:
+            st.error("Please enter a prompt.")
+
+if __name__ == "__main__":
+    image_generation_page()
