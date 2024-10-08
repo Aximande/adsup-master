@@ -10,15 +10,20 @@ if not REPLICATE_API_TOKEN:
 replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
 @st.cache_data(ttl=300)
-def get_available_models():
-    models = replicate_client.models.list(owner="aximande")
-    return [f"{model.owner}/{model.name}:{model.latest_version.id}" for model in models]
+def get_available_models(owner="aximande"):
+    all_models = replicate_client.models.list()
+    owner_models = [model for model in all_models if model.owner == owner]
+    return [f"{model.owner}/{model.name}:{model.latest_version.id}" for model in owner_models]
 
 def image_generation_page():
     st.header("Generate Images with Fine-Tuned FLUX Models")
 
     # Get available models
     available_models = get_available_models()
+
+    if not available_models:
+        st.warning("No models found for the specified owner. Please check your Replicate account.")
+        return
 
     # Select model
     selected_model = st.selectbox("Select a model", available_models)
@@ -57,19 +62,23 @@ def image_generation_page():
                     "num_inference_steps": num_inference_steps
                 }
 
-                output = replicate_client.run(
-                    selected_model,
-                    input=input_params
-                )
+                try:
+                    output = replicate_client.run(
+                        selected_model,
+                        input=input_params
+                    )
 
-                # Display generated images
-                if isinstance(output, list):
-                    for i, image_url in enumerate(output):
-                        st.image(image_url, caption=f"Generated Image {i+1}")
-                else:
-                    st.image(output, caption="Generated Image")
+                    # Display generated images
+                    if isinstance(output, list):
+                        for i, image_url in enumerate(output):
+                            st.image(image_url, caption=f"Generated Image {i+1}")
+                    else:
+                        st.image(output, caption="Generated Image")
+                except Exception as e:
+                    st.error(f"An error occurred while generating the image: {str(e)}")
         else:
             st.error("Please enter a prompt.")
 
 if __name__ == "__main__":
     image_generation_page()
+    
