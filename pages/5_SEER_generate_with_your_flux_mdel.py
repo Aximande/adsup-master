@@ -17,17 +17,43 @@ if not REPLICATE_API_TOKEN:
     st.error("Replicate API token not found. Please set it in Streamlit secrets or as an environment variable.")
     st.stop()
 
+# Initialize Replicate client
 replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
 # Function to get user's own models from Replicate
 def get_user_models():
     try:
-        user = replicate_client.users.get()
-        models = user.list_models()
+        # Retrieve authenticated user's information
+        user_info = replicate_client.whoami()
+        st.write(f"Authenticated as: {user_info}")  # For debugging purposes
+
+        # Determine the correct key for username
+        if 'username' in user_info:
+            username = user_info['username']
+        elif 'name' in user_info:
+            username = user_info['name']
+        else:
+            st.error("Unable to find the username in the authenticated user info.")
+            return []
+
+        # List models owned by the user
+        models = replicate_client.models.list(owner=username)
+
+        # Handle pagination if necessary
         model_list = []
         for model in models:
             model_full_name = f"{model.owner}/{model.name}"
             model_list.append(model_full_name)
+
+        # Optional: Handle additional pages if you have more models
+        # Uncomment the following lines if you expect more than the first page of models
+        # for page in replicate.paginate(replicate_client.models.list, owner=username):
+        #     for model in page:
+        #         model_full_name = f"{model.owner}/{model.name}"
+        #         model_list.append(model_full_name)
+        #     if len(model_list) > 100:  # Adjust the limit as needed
+        #         break
+
         return model_list
     except Exception as e:
         st.error(f"Error fetching user models: {e}")
@@ -81,7 +107,7 @@ if 'prompt_history' not in st.session_state:
 if 'user_id' not in st.session_state:
     st.session_state['user_id'] = str(uuid.uuid4())
 if 'model' not in st.session_state:
-    st.session_state['model'] = list(available_models.keys())[0]  # Set default model
+    st.session_state['model'] = list(available_models.keys())[0] if available_models else None  # Set default model
 if 'settings' not in st.session_state:
     st.session_state['settings'] = {}
 
@@ -241,7 +267,11 @@ def render_sidebar():
     with st.sidebar:
         st.header("🧠 Model Selection")
         model_names = list(available_models.keys())
-        default_model = st.session_state.get('model', model_names[0])
+        default_model = st.session_state.get('model', model_names[0] if model_names else None)
+
+        if not model_names:
+            st.error("No models available. Please ensure you have models configured locally or created on Replicate.")
+            st.stop()
 
         model = st.selectbox(
             "Select a Model",
@@ -275,11 +305,11 @@ def render_main_settings():
     properties = input_schema.get("properties", {})
     required_params = input_schema.get("required", [])
 
-    # Main parameters you want to show
+    # Define main parameters to display (customize as needed)
     main_params = ["prompt_strength", "num_outputs", "image_dimensions", "style_preset"]
 
-    for param in properties:
-        if param in main_params:
+    for param in main_params:
+        if param in properties:
             render_parameter(param, properties[param], settings)
 
     st.session_state['settings'] = settings
@@ -291,7 +321,7 @@ def render_advanced_settings():
     properties = input_schema.get("properties", {})
     required_params = input_schema.get("required", [])
 
-    # Advanced parameters
+    # Define advanced parameters to display (customize as needed)
     advanced_params = [param for param in properties if param not in st.session_state['settings']]
 
     for param in advanced_params:
@@ -310,13 +340,27 @@ def render_parameter(param, schema, settings):
         min_value = schema.get("minimum", 0)
         max_value = schema.get("maximum", 100)
         default_value = schema.get("default", min_value)
-        settings[param] = st.sidebar.slider(title, int(min_value), int(max_value), int(default_value), step=1, help=description)
+        settings[param] = st.sidebar.slider(
+            title,
+            int(min_value),
+            int(max_value),
+            int(default_value),
+            step=1,
+            help=description
+        )
     elif param_type == "number":
         min_value = schema.get("minimum", 0.0)
         max_value = schema.get("maximum", 1.0)
         default_value = schema.get("default", min_value)
         step = (max_value - min_value) / 100  # Adjust step size based on range
-        settings[param] = st.sidebar.slider(title, float(min_value), float(max_value), float(default_value), step=float(step), help=description)
+        settings[param] = st.sidebar.slider(
+            title,
+            float(min_value),
+            float(max_value),
+            float(default_value),
+            step=float(step),
+            help=description
+        )
     elif param_type == "boolean":
         settings[param] = st.sidebar.checkbox(title, schema.get("default", False), help=description)
     elif param_type == "string":
