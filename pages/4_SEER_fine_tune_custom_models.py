@@ -3,6 +3,7 @@ import replicate
 import os
 from io import BytesIO
 import re
+from utils import load_custom_css
 
 # Initialize Replicate client with API token
 REPLICATE_API_TOKEN = "r8_eCOg3M8VkogXEgbMgzRKfrpxw3TuZkS3s8Jen"
@@ -101,7 +102,7 @@ def start_training(dest_model_name, uploaded_file, trigger_word, steps, autocapt
 # Streamlit App Layout
 st.set_page_config(page_title="FLUX.1 Fine-Tuning & Génération d'Images", layout="wide")
 
-st.title("Outil d'entraînement et génération d'images pour FLUX.1")
+st.title("Outil d'entraînement de modèles fine-tunés pour FLUX.1")
 
 # Sidebar Navigation
 st.sidebar.title("Navigation")
@@ -299,6 +300,9 @@ if app_mode == "Fine-tuning du modèle":
                     st.success(status_message)
                 else:
                     st.error("L'entraînement n'a pas pu démarrer.")
+
+# Charger le CSS personnalisé
+load_custom_css()
 
 # Footer
 st.markdown("---")
