@@ -6,6 +6,7 @@ import uuid
 import json
 import requests
 from datetime import datetime
+from utils import load_custom_css
 
 # Set the Replicate API token
 REPLICATE_API_TOKEN = st.secrets["REPLICATE_API_TOKEN"]
@@ -448,6 +449,10 @@ if 'text_to_add' not in st.session_state:
     st.session_state['text_to_add'] = ""
 if 'typography_options' not in st.session_state:
     st.session_state['typography_options'] = []
+
+
+# Charger le CSS personnalisé
+load_custom_css()
 
 if __name__ == "__main__":
     main()
