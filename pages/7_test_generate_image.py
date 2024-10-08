@@ -79,7 +79,7 @@ def enhance_prompt(prompt, enhancer):
             st.error(f"Error enhancing prompt: {e}")
     return prompt
 
-def generate_image(prompt, model, settings):
+def generate_image(prompt, model, settings, available_models):
     try:
         model_info = available_models[model]
         model_version = model_info["model_version"]
@@ -158,36 +158,63 @@ def image_generation_page():
     main_params = ["prompt_strength", "num_outputs", "image_dimensions", "style_preset"]
     for param in main_params:
         if param in properties:
-            settings[param] = st.sidebar.slider(
-                param.replace("_", " ").capitalize(),
-                min_value=properties[param].get("minimum", 0),
-                max_value=properties[param].get("maximum", 100),
-                value=properties[param].get("default", 50)
-            )
+            param_schema = properties[param]
+            param_type = param_schema.get("type")
+
+            if param_type == "integer":
+                settings[param] = st.sidebar.slider(
+                    param.replace("_", " ").capitalize(),
+                    min_value=int(param_schema.get("minimum", 0)),
+                    max_value=int(param_schema.get("maximum", 100)),
+                    value=int(param_schema.get("default", 50)),
+                    step=1
+                )
+            elif param_type == "number":
+                settings[param] = st.sidebar.slider(
+                    param.replace("_", " ").capitalize(),
+                    min_value=float(param_schema.get("minimum", 0.0)),
+                    max_value=float(param_schema.get("maximum", 1.0)),
+                    value=float(param_schema.get("default", 0.5)),
+                    step=0.01
+                )
+            elif param_type == "string" and "enum" in param_schema:
+                settings[param] = st.sidebar.selectbox(
+                    param.replace("_", " ").capitalize(),
+                    options=param_schema["enum"]
+                )
 
     # Advanced parameters
     with st.sidebar.expander("Advanced Settings"):
         for param, schema in properties.items():
             if param not in main_params:
-                if schema["type"] == "number":
+                param_type = schema.get("type")
+
+                if param_type == "number":
                     settings[param] = st.slider(
                         param.replace("_", " ").capitalize(),
-                        min_value=schema.get("minimum", 0.0),
-                        max_value=schema.get("maximum", 1.0),
-                        value=schema.get("default", 0.5),
+                        min_value=float(schema.get("minimum", 0.0)),
+                        max_value=float(schema.get("maximum", 1.0)),
+                        value=float(schema.get("default", 0.5)),
                         step=0.01
                     )
-                elif schema["type"] == "integer":
+                elif param_type == "integer":
                     settings[param] = st.number_input(
                         param.replace("_", " ").capitalize(),
-                        min_value=schema.get("minimum", 0),
-                        max_value=schema.get("maximum", 100),
-                        value=schema.get("default", 50)
+                        min_value=int(schema.get("minimum", 0)),
+                        max_value=int(schema.get("maximum", 100)),
+                        value=int(schema.get("default", 50)),
+                        step=1
                     )
-                elif schema["type"] == "boolean":
-                    settings[param] = st.checkbox(param.replace("_", " ").capitalize(), value=schema.get("default", False))
-                elif schema["type"] == "string" and "enum" in schema:
-                    settings[param] = st.selectbox(param.replace("_", " ").capitalize(), options=schema["enum"])
+                elif param_type == "boolean":
+                    settings[param] = st.checkbox(
+                        param.replace("_", " ").capitalize(),
+                        value=schema.get("default", False)
+                    )
+                elif param_type == "string" and "enum" in schema:
+                    settings[param] = st.selectbox(
+                        param.replace("_", " ").capitalize(),
+                        options=schema["enum"]
+                    )
 
     st.session_state['settings'] = settings
 
@@ -218,6 +245,7 @@ def image_generation_page():
             st.session_state.prompt_history.append(current_prompt)
             st.success("Changes saved.")
     else:
+        current_prompt = prompt
         st.warning("No prompt has been saved yet.")
 
     # Image generation
@@ -226,7 +254,7 @@ def image_generation_page():
             st.error("❌ Please enter a valid prompt.")
         else:
             with st.spinner("🖼️ Generating image..."):
-                output = generate_image(current_prompt, selected_model, st.session_state['settings'])
+                output = generate_image(current_prompt, selected_model, st.session_state['settings'], available_models)
                 if output:
                     st.success("✅ Image(s) generated successfully!")
                     if isinstance(output, list):
