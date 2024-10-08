@@ -6,7 +6,6 @@ import os
 import csv
 import uuid
 import json
-import requests
 from datetime import datetime
 from transformers import pipeline
 
@@ -20,31 +19,28 @@ if not REPLICATE_API_TOKEN:
 # Initialize Replicate client
 replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
-# Hardcode your Replicate username
-USERNAME = "aximande"
-
-# Function to get user's own models from Replicate
-def get_user_models(username):
+# Function to get public models owned by a specific user
+def get_public_models(username="aximande"):
     try:
-        # List models owned by the user
-        models = replicate_client.models.list(owner=username)
-        model_list = []
-        for model in models:
-            model_full_name = f"{model.owner}/{model.name}"
-            model_list.append(model_full_name)
+        public_models = []
+        for page in replicate.paginate(replicate_client.models.list):
+            for model in page:
+                if model.owner == username:
+                    public_models.append(model)
+        model_list = [f"{model.owner}/{model.name}" for model in public_models]
         return model_list
     except Exception as e:
-        st.error(f"Error fetching user models: {e}")
+        st.error(f"Error fetching public models: {e}")
         return []
 
-# Function to load model configurations
+# Function to load model configurations (private and public)
 def load_model_configs(directory="models_configs"):
     import os
     import json
 
     models = {}
 
-    # Load models from the local configs
+    # Load private models from the local configs
     if os.path.exists(directory):
         for filename in os.listdir(directory):
             if filename.endswith(".json"):
@@ -58,9 +54,9 @@ def load_model_configs(directory="models_configs"):
                         "input_schema": config.get("input_schema", {})
                     }
 
-    # Fetch user's models from Replicate
-    user_models = get_user_models(USERNAME)
-    for model_full_name in user_models:
+    # Fetch public models from Replicate
+    public_model_names = get_public_models(username="aximande")
+    for model_full_name in public_model_names:
         try:
             model = replicate_client.models.get(model_full_name)
             latest_version = model.versions.list()[0]
@@ -70,7 +66,7 @@ def load_model_configs(directory="models_configs"):
                 "input_schema": latest_version.openapi_schema['components']['schemas']['Input']
             }
         except Exception as e:
-            st.warning(f"Could not load model {model_full_name}: {e}")
+            st.warning(f"Could not load public model {model_full_name}: {e}")
 
     return models
 
@@ -354,9 +350,13 @@ def reset_inputs():
 
 def enhance_prompt(prompt):
     if st.session_state.flux_enhancer is not None:
-        prefix = "enhance prompt: "
-        enhanced = st.session_state.flux_enhancer(prefix + prompt, max_length=256)[0]['generated_text']
-        return enhanced.strip()
+        try:
+            prefix = "enhance prompt: "
+            enhanced = st.session_state.flux_enhancer(prefix + prompt, max_length=256)[0]['generated_text']
+            return enhanced.strip()
+        except Exception as e:
+            st.error(f"Error enhancing prompt: {e}")
+            return prompt
     else:
         return prompt
 
