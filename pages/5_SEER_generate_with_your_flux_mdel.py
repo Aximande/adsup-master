@@ -20,40 +20,18 @@ if not REPLICATE_API_TOKEN:
 # Initialize Replicate client
 replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
+# Hardcode your Replicate username
+USERNAME = "aximande"
+
 # Function to get user's own models from Replicate
-def get_user_models():
+def get_user_models(username):
     try:
-        # Retrieve authenticated user's information
-        user_info = replicate_client.whoami()
-        st.write(f"Authenticated as: {user_info}")  # For debugging purposes
-
-        # Determine the correct key for username
-        if 'username' in user_info:
-            username = user_info['username']
-        elif 'name' in user_info:
-            username = user_info['name']
-        else:
-            st.error("Unable to find the username in the authenticated user info.")
-            return []
-
         # List models owned by the user
         models = replicate_client.models.list(owner=username)
-
-        # Handle pagination if necessary
         model_list = []
         for model in models:
             model_full_name = f"{model.owner}/{model.name}"
             model_list.append(model_full_name)
-
-        # Optional: Handle additional pages if you have more models
-        # Uncomment the following lines if you expect more than the first page of models
-        # for page in replicate.paginate(replicate_client.models.list, owner=username):
-        #     for model in page:
-        #         model_full_name = f"{model.owner}/{model.name}"
-        #         model_list.append(model_full_name)
-        #     if len(model_list) > 100:  # Adjust the limit as needed
-        #         break
-
         return model_list
     except Exception as e:
         st.error(f"Error fetching user models: {e}")
@@ -81,7 +59,7 @@ def load_model_configs(directory="models_configs"):
                     }
 
     # Fetch user's models from Replicate
-    user_models = get_user_models()
+    user_models = get_user_models(USERNAME)
     for model_full_name in user_models:
         try:
             model = replicate_client.models.get(model_full_name)
