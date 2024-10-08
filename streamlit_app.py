@@ -45,11 +45,11 @@ def display_header():
     col_logo, col_title = st.columns([1, 3])
     with col_logo:
         # Ajouter le logo du client (Ad's up consulting)
-        logo_path = os.path.join("images", "adsup-logo.png")
+        logo_path = os.path.join(os.path.dirname(__file__), "adsup-logo.png")
         if os.path.exists(logo_path):
             st.image(logo_path, width=150, use_column_width=False, caption=None)
         else:
-            st.warning("Logo Ad's up consulting non trouvé. Assurez-vous que 'adsup-logo.png' est dans le dossier 'images'.")
+            st.warning("Logo Ad's up consulting non trouvé. Assurez-vous que 'adsup-logo.png' est dans le même dossier que l'application.")
     with col_title:
         st.markdown("""
         <h1 style='text-align: center; color: #FFFFFF;'>Ad's up BU IA Plateforme de Test</h1>
@@ -60,11 +60,11 @@ def display_footer():
     col_footer = st.columns([1])
     with col_footer[0]:
         # Ajouter le logo de Ad's up
-        adsup_logo_path = os.path.join("images", "adsup-logo.png")
+        adsup_logo_path = os.path.join(os.path.dirname(__file__), "adsup-logo.png")
         if os.path.exists(adsup_logo_path):
             st.image(adsup_logo_path, width=150, use_column_width=False, caption="Développé par Ad's up consulting")
         else:
-            st.warning("Logo Ad's up non trouvé. Assurez-vous que 'adsup-logo.png' est dans le dossier 'images'.")
+            st.warning("Logo Ad's up non trouvé. Assurez-vous que 'adsup-logo.png' est dans le même dossier que l'application.")
 
     # Ajouter les badges GitHub et Twitter
     st.markdown("""
