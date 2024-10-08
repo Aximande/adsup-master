@@ -15,11 +15,6 @@ replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
 # Default input schema for custom models
 default_input_schema = {
-    "prompt": {
-        "type": "string",
-        "title": "Prompt",
-        "description": "Description de l'image à générer."
-    },
     "model": {
         "type": "string",
         "title": "Version du Modèle",
@@ -119,7 +114,6 @@ def get_model_versions(model_owner, model_name):
 
     return model_versions
 
-
 def generate_image(prompt, model_version, settings):
     try:
         input_params = {k: v for k, v in settings.items() if v is not None}
@@ -134,7 +128,6 @@ def generate_image(prompt, model_version, settings):
         st.error(f"Erreur lors de la génération de l'image : {e}")
         return None
 
-
 def reset_inputs():
     st.session_state.history = []
     st.session_state.prompt_history = []
@@ -143,9 +136,9 @@ def reset_inputs():
     st.session_state['custom_name'] = ""
     st.session_state['custom_versions'] = []
     st.session_state['selected_version'] = ""
+    st.session_state['prompt'] = ""
     st.session_state['text_to_add'] = ""
     st.session_state['typography_options'] = []
-
 
 def log_interaction(prompt, parameters, output_url, model_name, user_id=None):
     log_file = 'user_interactions.csv'
@@ -167,7 +160,6 @@ def log_interaction(prompt, parameters, output_url, model_name, user_id=None):
             writer.writerow(['timestamp', 'user_id', 'model_name', 'prompt', 'parameters', 'output_url', 'prompt_history'])
         writer.writerow(data_row)
 
-
 def display_header():
     st.title("Assistant de Génération d'Images avec Modèles Personnalisés")
     st.write("""
@@ -176,10 +168,8 @@ def display_header():
     """)
     st.info("**Conseil :** Pour de meilleurs résultats, décrivez clairement l'image que vous souhaitez générer.")
 
-
 def construct_typography_instruction(options):
     return f" with typography styles: {', '.join(options)}" if options else ""
-
 
 def construct_final_prompt(base_prompt, text, typography_styles):
     if text.strip():
@@ -187,7 +177,6 @@ def construct_final_prompt(base_prompt, text, typography_styles):
         return f"{base_prompt}. Add the text '{text}' written in a legible way on the image{typography_instruction}."
     else:
         return base_prompt
-
 
 def render_sidebar():
     with st.sidebar:
@@ -232,7 +221,6 @@ def render_sidebar():
         with st.expander("Paramètres Avancés"):
             render_advanced_settings()
 
-
 def render_parameter(param, schema, settings):
     if not isinstance(schema, dict):
         st.warning(f"Le paramètre '{param}' n'a pas de schéma défini correctement.")
@@ -253,7 +241,7 @@ def render_parameter(param, schema, settings):
         min_value = schema.get("minimum", 0.0)
         max_value = schema.get("maximum", 100.0)
         default_value = schema.get("default", min_value)
-        step = (max_value - min_value) / 100
+        step = (max_value - min_value) / 100 if max_value > min_value else 0.1
         settings[param] = st.sidebar.slider(title, float(min_value), float(max_value), float(default_value), step=step, help=description)
     elif param_type == "boolean":
         settings[param] = st.sidebar.checkbox(title, schema.get("default", False), help=description)
@@ -263,7 +251,6 @@ def render_parameter(param, schema, settings):
         else:
             settings[param] = st.sidebar.text_input(title, schema.get("default", ""), help=description)
 
-
 def render_main_settings():
     st.sidebar.subheader("Paramètres Principaux")
     settings = st.session_state.get('settings', {})
@@ -271,8 +258,8 @@ def render_main_settings():
     # Use default input schema
     model_input_schema = default_input_schema
 
-    # Define main parameters based on your custom models
-    main_params = ["prompt", "model", "lora_scale", "num_outputs", "aspect_ratio", "output_format",
+    # Exclude 'prompt' from main parameters since it will be in the main content area
+    main_params = ["model", "lora_scale", "num_outputs", "aspect_ratio", "output_format",
                    "guidance_scale", "output_quality", "prompt_strength", "extra_lora_scale", "num_inference_steps"]
 
     for param in main_params:
@@ -285,14 +272,13 @@ def render_main_settings():
     # Update st.session_state['settings']
     st.session_state['settings'] = settings
 
-
 def render_advanced_settings():
     st.sidebar.subheader("Paramètres Avancés")
     settings = st.session_state.get('settings', {})
 
     model_input_schema = default_input_schema
 
-    # Exclude parameters already in settings (from main parameters)
+    # Exclude parameters already in settings and 'prompt'
     advanced_params = [param for param in model_input_schema.keys() if param not in settings and param != 'prompt']
 
     for param in advanced_params:
@@ -305,16 +291,19 @@ def render_advanced_settings():
     # Update st.session_state['settings']
     st.session_state['settings'] = settings
 
-
 def main():
     display_header()
     render_sidebar()
 
-    # Update prompt from settings
-    prompt = st.session_state['settings'].get('prompt', '')
-
-    # Ensure prompt is in st.session_state['settings']
-    st.session_state['settings']['prompt'] = prompt
+    st.subheader("📝 Entrée du Prompt")
+    prompt = st.text_area(
+        "Entrez votre prompt ici",
+        value=st.session_state.get('prompt', ''),
+        height=150,
+        placeholder="Décrivez l'image que vous souhaitez générer...",
+        help="Saisissez une description détaillée pour générer une image."
+    )
+    st.session_state['prompt'] = prompt  # Save the prompt in session state
 
     if st.button("💾 Enregistrer le prompt"):
         st.session_state.prompt_history.append(prompt)
@@ -329,6 +318,7 @@ def main():
         )
         if st.button("💾 Enregistrer les modifications"):
             st.session_state.prompt_history.append(editable_prompt)
+            st.session_state['prompt'] = editable_prompt  # Update the prompt in session state
             st.success("Modifications enregistrées.")
     else:
         st.warning("Aucun prompt n'a été enregistré pour le moment.")
@@ -356,6 +346,7 @@ def main():
         )
         st.session_state['typography_options'] = typography_options
 
+    # Construct the final prompt
     if st.session_state.prompt_history:
         prompt_to_use = st.session_state.prompt_history[-1]
         final_prompt = construct_final_prompt(
@@ -434,7 +425,6 @@ def main():
 
         st.markdown("**Note :** L'historique est stocké localement dans votre session et sera perdu si vous rafraîchissez la page.")
 
-
 # Initialize session state variables
 if 'history' not in st.session_state:
     st.session_state.history = []
@@ -452,6 +442,8 @@ if 'custom_versions' not in st.session_state:
     st.session_state['custom_versions'] = []
 if 'selected_version' not in st.session_state:
     st.session_state['selected_version'] = ""
+if 'prompt' not in st.session_state:
+    st.session_state['prompt'] = ""
 if 'text_to_add' not in st.session_state:
     st.session_state['text_to_add'] = ""
 if 'typography_options' not in st.session_state:
