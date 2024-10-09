@@ -6,7 +6,7 @@ import re
 from utils import load_custom_css
 
 # Initialize Replicate client with API token
-REPLICATE_API_TOKEN = "r8_eCOg3M8VkogXEgbMgzRKfrpxw3TuZkS3s8Jen"
+REPLICATE_API_TOKEN = st.secrets["REPLICATE_API_TOKEN"]
 
 if not REPLICATE_API_TOKEN:
     st.error("Replicate API token not found. Please set it in the code.")
