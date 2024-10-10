@@ -127,6 +127,50 @@ def analyze_transcript_with_gpt(corrected_transcript, analysis_prompt):
     )
     return response
 
+def split_audio(audio, max_chunk_size_mb=10):
+    chunk_length_ms = len(audio) * (max_chunk_size_mb / (len(audio) / 1000 / 60 * 1.5))  # Estimation plus précise
+    chunks = []
+    for i, start in enumerate(range(0, len(audio), int(chunk_length_ms))):
+        chunk = audio[start:start + int(chunk_length_ms)]
+        chunk_file = f"audio_chunk_{i}.mp3"
+        chunk.export(chunk_file, format="mp3")
+        chunks.append(chunk_file)
+    return chunks
+
+def process_chunks(chunks, language_code):
+    transcripts = []
+    for idx, chunk_file in enumerate(chunks):
+        st.write(translate("Processing chunk {}/{}...", idx + 1, len(chunks)))
+        transcript = process_audio_chunk(chunk_file, language_code)
+        transcripts.append(transcript.text)
+    return " ".join(transcripts)
+
+def chunk_text(text, max_tokens=4000):
+    words = text.split()
+    chunks = []
+    current_chunk = []
+    current_length = 0
+    for word in words:
+        if current_length + len(word.split()) > max_tokens:
+            chunks.append(" ".join(current_chunk))
+            current_chunk = []
+            current_length = 0
+        current_chunk.append(word)
+        current_length += len(word.split())
+    if current_chunk:
+        chunks.append(" ".join(current_chunk))
+    return chunks
+
+def analyze_large_transcript(transcript, analysis_prompt):
+    chunks = chunk_text(transcript)
+    analyses = []
+    for idx, chunk in enumerate(chunks):
+        st.write(f"Analyzing chunk {idx + 1}/{len(chunks)}...")
+        chunk_prompt = f"{analysis_prompt}\n\nTranscript chunk {idx + 1}/{len(chunks)}:\n{chunk}"
+        analysis = analyze_transcript_with_gpt(chunk, chunk_prompt)
+        analyses.append(analysis.choices[0].message.content)
+    return "\n\n".join(analyses)
+
 st.title(translate("YouTube Video Transcriber and Analyzer"))
 
 video_url = st.text_input(translate("Enter YouTube Video URL"))
@@ -292,7 +336,7 @@ Only make necessary corrections and do not change other parts of the text.
     detail_instructions = {
         "Brief": "Provide a concise overview focusing on the main topics and overall message. Include up to 3 key points with their respective timestamps.",
         "Moderate": "Offer a balanced summary with specific points and some examples. Include up to 5 key points with their respective timestamps and brief explanations.",
-        "Detailed": "Deliver an in-depth analysis with extensive examples and subpoints. Include at least 7 key points with their respective timestamps, detailed explanations, and relevant examples or quotes from the transcript."
+        "Detailed": "Deliver an in-depth analysis with extensive examples and subpoints. Include all main chapters and sub-chapters key points with their respective timestamps, detailed explanations, and relevant examples or quotes from the transcript. Ensure that you give equal attention to all parts of the transcript, including the middle and end sections."
     }
 
     instruction = detail_instructions[detail_level]
@@ -303,24 +347,17 @@ Analyze the following transcript and provide a {detail_level.lower()} summary in
 Organize the analysis in a clear, structured format, using markdown for formatting.
 Begin with an overview of the content, then list the main points or chapters chronologically.
 For each main point or chapter, include the timestamp, a brief description, and any relevant details or examples.
+Ensure that you give equal attention to all parts of the transcript, including the middle and end sections.
 Conclude with a summary of the overall message or significance of the content.
 
 Transcript:
-{corrected_transcript}
+{{TRANSCRIPT_CHUNK}}
 """
 
     st.info(translate("Analyzing transcript with GPT-4o mini..."))
     try:
-        analysis_response = analyze_transcript_with_gpt(corrected_transcript, analysis_prompt)
-        analysis_text = analysis_response.choices[0].message.content
-        input_tokens = analysis_response.usage.prompt_tokens
-        output_tokens = analysis_response.usage.completion_tokens
-        gpt_cost = (input_tokens * GPT4O_MINI_INPUT_COST) + (output_tokens * GPT4O_MINI_OUTPUT_COST)
-        total_cost += gpt_cost
-        st.info(translate("GPT-4o mini usage: {} input tokens, {} output tokens", input_tokens, output_tokens))
-        st.info(translate("Estimated GPT-4o mini cost for analysis: ${:.4f}", gpt_cost))
-        process_log.append(f"Transcript analyzed. Input tokens: {input_tokens}, Output tokens: {output_tokens}")
-        process_log.append(f"Analysis cost: ${gpt_cost:.4f}")
+        analysis_text = analyze_large_transcript(corrected_transcript, analysis_prompt)
+        process_log.append("Transcript analyzed successfully")
     except Exception as e:
         st.error(f"{translate('Error during analysis:')} {str(e)}")
         process_log.append(f"Error during analysis: {str(e)}")
