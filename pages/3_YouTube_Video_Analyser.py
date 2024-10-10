@@ -6,7 +6,7 @@ import os
 from langcodes import Language
 import glob
 import base64
-from utils import load_custom_css
+#from utils import load_custom_css
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
@@ -58,7 +58,7 @@ GPT4O_MINI_INPUT_COST = 0.150 / 1_000_000  # $0.150 per million input tokens
 GPT4O_MINI_OUTPUT_COST = 0.600 / 1_000_000  # $0.600 per million output tokens
 
 # Charger le CSS personnalisé
-load_custom_css()
+#load_custom_css()
 
 
 def translate(text, *args):
@@ -68,16 +68,64 @@ def translate(text, *args):
         return translated.format(*args)
     return translated
 
-def get_download_link(text, filename, link_text):
-    """Generates a link to download the given text as a file."""
+@st.cache_data
+def generate_download_link(text, filename, link_text):
     b64 = base64.b64encode(text.encode()).decode()
     return f'<a href="data:file/txt;base64,{b64}" download="{filename}">{link_text}</a>'
 
+@st.cache_data
 def get_video_title(video_url):
     ydl_opts = {'quiet': True}
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(video_url, download=False)
         return info.get('title', 'Untitled Video')
+
+@st.cache_data
+def download_audio(video_url):
+    ydl_opts = {
+        'format': 'm4a/bestaudio/best',
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'm4a',
+        }],
+        'outtmpl': 'audio.%(ext)s',
+        'quiet': True
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        error_code = ydl.download([video_url])
+    return error_code
+
+def cleanup_temp_files():
+    for file in glob.glob("audio_chunk_*.mp3"):
+        os.remove(file)
+    if os.path.exists("audio.m4a"):
+        os.remove("audio.m4a")
+    if os.path.exists(report_filename):
+        os.remove(report_filename)
+
+@st.cache_data
+def process_audio_chunk(chunk_file, language_code):
+    with open(chunk_file, "rb") as audio_file_obj:
+        response = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file_obj,
+            language=language_code,
+            response_format="verbose_json",
+            timestamp_granularities=["segment"]
+        )
+    return response
+
+@st.cache_data
+def analyze_transcript_with_gpt(corrected_transcript, analysis_prompt):
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant specializing in content analysis."},
+            {"role": "user", "content": analysis_prompt}
+        ],
+        max_tokens=16384
+    )
+    return response
 
 st.title(translate("YouTube Video Transcriber and Analyzer"))
 
@@ -123,18 +171,7 @@ if st.button(translate("Process Video")):
     if video_url:
         try:
             st.info(translate("Downloading audio from YouTube..."))
-            ydl_opts = {
-                'format': 'm4a/bestaudio/best',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'm4a',
-                }],
-                'outtmpl': 'audio.%(ext)s',
-                'quiet': True
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                error_code = ydl.download([video_url])
-
+            error_code = download_audio(video_url)
             if error_code == 0:
                 st.success(translate("Audio downloaded successfully."))
                 file_size = os.path.getsize('audio.m4a') / (1024 * 1024)  # in MB
@@ -185,22 +222,15 @@ if st.button(translate("Process Video")):
 
     transcripts = []
     for idx, chunk_file in enumerate(chunks):
-        with open(chunk_file, "rb") as audio_file_obj:
-            st.write(translate("Transcribing chunk {}/{}...", idx + 1, len(chunks)))
-            try:
-                response = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file_obj,
-                    language=language_code,
-                    response_format="verbose_json",
-                    timestamp_granularities=["segment"]
-                )
-                transcripts.append(response)
-                process_log.append(f"Chunk {idx + 1}/{len(chunks)} transcribed successfully")
-            except Exception as e:
-                st.error(f"{translate('Error during transcription:')} {str(e)}")
-                process_log.append(f"Error transcribing chunk {idx + 1}/{len(chunks)}: {str(e)}")
-                st.stop()
+        st.write(translate("Processing chunk {}/{}...", idx + 1, len(chunks)))
+        try:
+            transcript = process_audio_chunk(chunk_file, language_code)
+            transcripts.append(transcript)
+            process_log.append(f"Chunk {idx + 1}/{len(chunks)} transcribed successfully")
+        except Exception as e:
+            st.error(f"{translate('Error during transcription:')} {str(e)}")
+            process_log.append(f"Error transcribing chunk {idx + 1}/{len(chunks)}: {str(e)}")
+            st.stop()
 
     # Combine transcripts
     combined_transcript = ""
@@ -281,17 +311,10 @@ Transcript:
 
     st.info(translate("Analyzing transcript with GPT-4o mini..."))
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant specializing in content analysis."},
-                {"role": "user", "content": analysis_prompt}
-            ],
-            max_tokens=16384  # Adjust as needed
-        )
-        analysis_text = response.choices[0].message.content
-        input_tokens = response.usage.prompt_tokens
-        output_tokens = response.usage.completion_tokens
+        analysis_response = analyze_transcript_with_gpt(corrected_transcript, analysis_prompt)
+        analysis_text = analysis_response.choices[0].message.content
+        input_tokens = analysis_response.usage.prompt_tokens
+        output_tokens = analysis_response.usage.completion_tokens
         gpt_cost = (input_tokens * GPT4O_MINI_INPUT_COST) + (output_tokens * GPT4O_MINI_OUTPUT_COST)
         total_cost += gpt_cost
         st.info(translate("GPT-4o mini usage: {} input tokens, {} output tokens", input_tokens, output_tokens))
@@ -329,8 +352,17 @@ Corrected Transcript:
 Total Estimated Cost: ${total_cost:.4f}
 """
 
-    # Generate download link
-    download_link = get_download_link(full_report, report_filename, translate("Download Report"))
+    # Libération de la mémoire
+    del audio
+    del chunks
+    del transcripts
+    del combined_transcript
+
+    # Nettoyage des fichiers temporaires
+    cleanup_temp_files()
+
+    # Génération du lien de téléchargement
+    download_link = generate_download_link(full_report, report_filename, translate("Download Report"))
     st.markdown(download_link, unsafe_allow_html=True)
 
     # Save the full report locally
@@ -338,8 +370,8 @@ Total Estimated Cost: ${total_cost:.4f}
         f.write(full_report)
     st.success(translate("Full report saved as {}", report_filename))
 
-    # Clean up temporary files
-    for file in glob.glob("audio_chunk_*.mp3"):
-        os.remove(file)
-    if os.path.exists("audio.m4a"):
-        os.remove("audio.m4a")
+# Ajoutez ce code à la fin de votre script principal :
+if st.button("Clear Session"):
+    st.cache_data.clear()
+    cleanup_temp_files()
+    st.experimental_rerun()
